@@ -6,7 +6,7 @@
 #include <string>
 
 static constexpr wchar_t kClassName[] = L"LixorOverlayWnd";
-static constexpr int kOverlayHeight = 320;
+static constexpr int kOverlayHeight = 480;
 
 bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int screenH) {
     WNDCLASSEXW wc{};

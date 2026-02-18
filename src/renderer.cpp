@@ -114,7 +114,7 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
         float maxTextWidth = width_ * 0.85f;
         float curY = static_cast<float>(height_);
 
-        for (int i = static_cast<int>(blocks.size()) - 1; i >= 0; --i) {
+        for (int i = 0; i < static_cast<int>(blocks.size()); ++i) {
             const auto& b = blocks[i];
             if (b.text.empty()) continue;
 
