@@ -5,6 +5,7 @@
 #include "ws_client.h"
 #include "message_handler.h"
 #include "menu_button.h"
+#include "test_input.h"
 #include <string>
 
 App& App::instance() {
@@ -40,6 +41,8 @@ bool App::init(HINSTANCE hInstance) {
     menuButton_ = std::make_unique<MenuButton>();
     menuButton_->create(hInstance, screenW, screenH);
 
+    testInput_ = std::make_unique<TestInput>();
+
     SetTimer(overlayWindow_->hwnd(),
              SubtitleManager::kTimerId,
              SubtitleManager::kTimerIntervalMs,
@@ -61,6 +64,7 @@ int App::run() {
 }
 
 void App::shutdown() {
+    if (testInput_) testInput_->close();
     wsClient_->stop();
     renderer_->release();
     menuButton_->destroy();

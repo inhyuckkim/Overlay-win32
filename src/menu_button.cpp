@@ -2,11 +2,13 @@
 #include "app.h"
 #include "subtitle_manager.h"
 #include "overlay_window.h"
+#include "test_input.h"
 
 static constexpr wchar_t kMenuBtnClass[] = L"LixorMenuBtn";
 
 enum MenuCmd : UINT {
     CMD_TOGGLE_SUBTITLES = 1001,
+    CMD_TEST_SUBTITLE,
     CMD_RESET,
     CMD_EXIT,
 };
@@ -91,6 +93,11 @@ LRESULT CALLBACK MenuButton::wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) 
                 App::instance().requestRedraw();
             }
             break;
+        case CMD_TEST_SUBTITLE: {
+            auto* ti = App::instance().testInput();
+            if (ti) ti->open(App::instance().hInstance());
+            break;
+        }
         case CMD_RESET:
             if (mgr) {
                 mgr->reset();
@@ -114,6 +121,7 @@ void MenuButton::showPopupMenu() {
     bool visible = mgr ? mgr->isVisible() : true;
     AppendMenuW(hMenu, MF_STRING, CMD_TOGGLE_SUBTITLES,
                 visible ? L"Hide Subtitles" : L"Show Subtitles");
+    AppendMenuW(hMenu, MF_STRING, CMD_TEST_SUBTITLE, L"Test Subtitle...");
     AppendMenuW(hMenu, MF_STRING, CMD_RESET, L"Reset");
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hMenu, MF_STRING, CMD_EXIT, L"Exit Overlay");

@@ -22,7 +22,12 @@ FetchContent_Declare(
 )
 
 set(USE_TLS OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(ixwebsocket nlohmann_json)
+set(USE_ZLIB OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(nlohmann_json)
+
+# Populate ixwebsocket and add as subdirectory (USE_ZLIB OFF from cache avoids ZLIB dependency)
+FetchContent_Populate(ixwebsocket)
+add_subdirectory(${ixwebsocket_SOURCE_DIR} ${ixwebsocket_BINARY_DIR} EXCLUDE_FROM_ALL)
 
 set(SOURCES
     src/main.cpp
@@ -33,6 +38,7 @@ set(SOURCES
     src/ws_client.cpp
     src/message_handler.cpp
     src/menu_button.cpp
+    src/test_input.cpp
 )
 
 add_executable(LixorOverlay WIN32 ${SOURCES} resources/app.rc)

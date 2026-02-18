@@ -8,6 +8,7 @@ class SubtitleManager;
 class WsClient;
 class MessageHandler;
 class MenuButton;
+class TestInput;
 
 class App {
 public:
@@ -24,6 +25,7 @@ public:
     WsClient*       wsClient() const { return wsClient_.get(); }
     MessageHandler* messageHandler() const { return messageHandler_.get(); }
     MenuButton*     menuButton() const { return menuButton_.get(); }
+    TestInput*      testInput() const { return testInput_.get(); }
 
     void requestRedraw();
 
@@ -37,4 +39,5 @@ private:
     std::unique_ptr<WsClient>        wsClient_;
     std::unique_ptr<MessageHandler>  messageHandler_;
     std::unique_ptr<MenuButton>      menuButton_;
+    std::unique_ptr<TestInput>       testInput_;
 };
