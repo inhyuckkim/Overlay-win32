@@ -24,12 +24,7 @@ void SubtitleManager::updateSubtitle(const std::wstring& langCode,
                                      const std::wstring& text,
                                      bool isFinal) {
     LanguageSlot* slot = findSlot(langCode);
-    if (!slot) {
-        // Auto-create a slot for the source language (first slot is always the input language)
-        addLanguage(langCode, langCode);
-        slot = findSlot(langCode);
-        if (!slot) return;
-    }
+    if (!slot) return;
 
     if (isFinal) {
         slot->finalText  = text;
