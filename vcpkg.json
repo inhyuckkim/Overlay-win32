@@ -1,0 +1,9 @@
+{
+  "name": "lixor-overlay",
+  "version": "1.0.0",
+  "description": "Lixor native subtitle overlay for Windows",
+  "dependencies": [
+    "ixwebsocket",
+    "nlohmann-json"
+  ]
+}

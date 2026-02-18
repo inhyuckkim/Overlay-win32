@@ -1,0 +1,30 @@
+#include <winver.h>
+
+// IDI_APP ICON "app.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS__WINDOWS32
+FILETYPE        VFT_APP
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName",      "Lixor"
+            VALUE "FileDescription",  "Lixor Subtitle Overlay"
+            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "InternalName",     "LixorOverlay"
+            VALUE "OriginalFilename", "LixorOverlay.exe"
+            VALUE "ProductName",      "Lixor Overlay"
+            VALUE "ProductVersion",   "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1252
+    END
+END
