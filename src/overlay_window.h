@@ -19,11 +19,14 @@ public:
     void hide();
     void reassertTopmost();
 
+    void setHeight(int height);
+
 private:
     static LRESULT CALLBACK wndProc(HWND, UINT, WPARAM, LPARAM);
 
     HWND hwnd_ = nullptr;
-    int  width_  = 0;
-    int  height_ = 0;
-    int  posY_   = 0;
+    int  width_   = 0;
+    int  height_  = 0;
+    int  posY_    = 0;
+    int  screenH_ = 0;
 };

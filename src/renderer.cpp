@@ -28,6 +28,7 @@ void Renderer::createTextFormats() {
     labelSize_ = fontSize_ * (13.0f / 22.0f);  // keep same ratio as original 13/22
 
     textFormat_.Reset();
+    textFormatLeading_.Reset();
     labelFormat_.Reset();
 
     HRESULT hr = dwFactory_->CreateTextFormat(
@@ -38,6 +39,15 @@ void Renderer::createTextFormats() {
     textFormat_->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
     textFormat_->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
     textFormat_->SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP);
+
+    hr = dwFactory_->CreateTextFormat(
+        L"Segoe UI", nullptr,
+        DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
+        fontSize_, L"", textFormatLeading_.GetAddressOf());
+    if (FAILED(hr)) return;
+    textFormatLeading_->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+    textFormatLeading_->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+    textFormatLeading_->SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP);
 
     hr = dwFactory_->CreateTextFormat(
         L"Segoe UI", nullptr,
@@ -81,6 +91,7 @@ void Renderer::discardDeviceResources() {
 void Renderer::release() {
     discardDeviceResources();
     textFormat_.Reset();
+    textFormatLeading_.Reset();
     labelFormat_.Reset();
     dwFactory_.Reset();
     d2dFactory_.Reset();
@@ -89,6 +100,38 @@ void Renderer::release() {
 void Renderer::resize(int width, int height) {
     width_  = width;
     height_ = height;
+}
+
+int Renderer::measureHeight(const std::vector<SubtitleBlock>& blocks) const {
+    if (blocks.empty() || !textFormat_ || !dwFactory_) return 0;
+
+    float maxTextWidth = width_ > 0 ? width_ * 0.85f : 800.0f;
+    float totalH       = 0.0f;
+    int   count       = 0;
+
+    for (const auto& b : blocks) {
+        if (b.text.empty()) continue;
+
+        ComPtr<IDWriteTextLayout> layout;
+        HRESULT hr = dwFactory_->CreateTextLayout(
+            b.text.c_str(), static_cast<UINT32>(b.text.size()),
+            textFormat_.Get(), maxTextWidth, 1000.0f,
+            layout.GetAddressOf());
+        if (FAILED(hr) || !layout) continue;
+
+        DWRITE_TEXT_METRICS metrics{};
+        layout->GetMetrics(&metrics);
+        float lineH  = fontSize_ * 1.3f;
+        float textH  = (std::min)(metrics.height + 4.0f, lineH * 4.0f);
+        float labelH = labelSize_ + 4.0f;
+        float blockH = kBlockPadV + labelH + textH + kBlockPadV;
+
+        if (count > 0) totalH += kBlockGap;
+        totalH += blockH;
+        ++count;
+    }
+
+    return count > 0 ? static_cast<int>(totalH + 0.5f) : 0;
 }
 
 void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
@@ -146,7 +189,7 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
             DWRITE_TEXT_METRICS metrics{};
             measureLayout->GetMetrics(&metrics);
             float lineH = fontSize_ * 1.3f;
-            float textH = (std::min)(metrics.height, lineH * 2);
+            float textH = (std::min)(metrics.height + 4.0f, lineH * 4.0f);
 
             float labelH = labelSize_ + 4.0f;
             float blockH = kBlockPadV + labelH + textH + kBlockPadV;
@@ -178,7 +221,7 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
             ComPtr<IDWriteTextLayout> drawLayout;
             dwFactory_->CreateTextLayout(
                 b.text.c_str(), static_cast<UINT32>(b.text.size()),
-                textFormat_.Get(), blockW - kBlockPadH * 2, textH,
+                textFormatLeading_.Get(), maxTextWidth, textH,
                 drawLayout.GetAddressOf());
             if (drawLayout) {
                 rt_->DrawTextLayout(origin, drawLayout.Get(), textBrush_.Get());

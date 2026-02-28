@@ -24,6 +24,9 @@ public:
 
     void setFontSizeLevel(int level);
 
+    /** Returns total height needed to display all blocks (same layout as render). 0 if blocks empty or no text format. */
+    int measureHeight(const std::vector<SubtitleBlock>& blocks) const;
+
 private:
     void createDeviceResources();
     void discardDeviceResources();
@@ -42,6 +45,7 @@ private:
     ComPtr<IDWriteFactory>           dwFactory_;
     ComPtr<ID2D1DCRenderTarget>      rt_;
     ComPtr<IDWriteTextFormat>        textFormat_;
+    ComPtr<IDWriteTextFormat>        textFormatLeading_;
     ComPtr<IDWriteTextFormat>        labelFormat_;
     ComPtr<ID2D1SolidColorBrush>     textBrush_;
     ComPtr<ID2D1SolidColorBrush>     bgBrush_;

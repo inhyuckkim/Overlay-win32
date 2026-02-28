@@ -18,9 +18,10 @@ bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int screenH) {
     wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
     RegisterClassExW(&wc);
 
-    width_  = screenW;
-    height_ = kOverlayHeight;
-    posY_   = screenH - height_;
+    width_   = screenW;
+    height_  = kOverlayHeight;
+    screenH_ = screenH;
+    posY_    = screenH - height_;
 
     hwnd_ = CreateWindowExW(
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
@@ -56,6 +57,14 @@ void OverlayWindow::reassertTopmost() {
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
+void OverlayWindow::setHeight(int h) {
+    height_ = (h > 0 ? h : 0);
+    posY_   = screenH_ - height_;
+    if (hwnd_)
+        SetWindowPos(hwnd_, nullptr, 0, posY_, width_, height_,
+                     SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
 LRESULT CALLBACK OverlayWindow::wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_OVERLAY_MSG: {
@@ -72,8 +81,14 @@ LRESULT CALLBACK OverlayWindow::wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
     case WM_OVERLAY_REDRAW: {
         auto* mgr = App::instance().subtitleManager();
         auto* ren = App::instance().renderer();
-        if (mgr && ren) {
-            ren->render(mgr->getVisibleBlocks());
+        auto* win = App::instance().overlayWindow();
+        if (mgr && ren && win) {
+            auto blocks = mgr->getVisibleBlocks();
+            int requiredHeight = ren->measureHeight(blocks);
+            win->setHeight(requiredHeight);
+            ren->resize(win->width(), win->height());
+            if (requiredHeight > 0)
+                ren->render(blocks);
         }
         return 0;
     }
