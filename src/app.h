@@ -29,6 +29,8 @@ public:
 
     void requestRedraw();
 
+    void setFontSizeLevel(int level);
+
 private:
     App() = default;
 

@@ -17,11 +17,24 @@ bool Renderer::init(HWND hwnd, int width, int height) {
                              reinterpret_cast<IUnknown**>(dwFactory_.GetAddressOf()));
     if (FAILED(hr)) return false;
 
-    hr = dwFactory_->CreateTextFormat(
+    createTextFormats();
+    createDeviceResources();
+    return true;
+}
+
+void Renderer::createTextFormats() {
+    // Level 1 → 12pt, level 10 → 32pt (level 5 ≈ 22pt)
+    fontSize_  = 12.0f + (fontSizeLevel_ - 1) * (20.0f / 9.0f);
+    labelSize_ = fontSize_ * (13.0f / 22.0f);  // keep same ratio as original 13/22
+
+    textFormat_.Reset();
+    labelFormat_.Reset();
+
+    HRESULT hr = dwFactory_->CreateTextFormat(
         L"Segoe UI", nullptr,
         DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
-        kFontSize, L"", textFormat_.GetAddressOf());
-    if (FAILED(hr)) return false;
+        fontSize_, L"", textFormat_.GetAddressOf());
+    if (FAILED(hr)) return;
     textFormat_->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
     textFormat_->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
     textFormat_->SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP);
@@ -29,12 +42,17 @@ bool Renderer::init(HWND hwnd, int width, int height) {
     hr = dwFactory_->CreateTextFormat(
         L"Segoe UI", nullptr,
         DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
-        kLabelSize, L"", labelFormat_.GetAddressOf());
-    if (FAILED(hr)) return false;
+        labelSize_, L"", labelFormat_.GetAddressOf());
+    if (FAILED(hr)) return;
     labelFormat_->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+}
 
-    createDeviceResources();
-    return true;
+void Renderer::setFontSizeLevel(int level) {
+    if (level < 1) level = 1;
+    if (level > 10) level = 10;
+    if (fontSizeLevel_ == level) return;
+    fontSizeLevel_ = level;
+    createTextFormats();
 }
 
 void Renderer::createDeviceResources() {
@@ -127,10 +145,10 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
 
             DWRITE_TEXT_METRICS metrics{};
             measureLayout->GetMetrics(&metrics);
-            float lineH = kFontSize * 1.3f;
+            float lineH = fontSize_ * 1.3f;
             float textH = (std::min)(metrics.height, lineH * 2);
 
-            float labelH = kLabelSize + 4.0f;
+            float labelH = labelSize_ + 4.0f;
             float blockH = kBlockPadV + labelH + textH + kBlockPadV;
             float blockW = (std::min)(metrics.widthIncludingTrailingWhitespace + kBlockPadH * 2, static_cast<float>(width_));
             blockW = (std::max)(blockW, 200.0f);

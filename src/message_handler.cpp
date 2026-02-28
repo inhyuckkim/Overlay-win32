@@ -1,4 +1,5 @@
 #include "message_handler.h"
+#include "app.h"
 #include "subtitle_manager.h"
 #include <windows.h>
 #include <nlohmann/json.hpp>
@@ -14,7 +15,7 @@ static std::wstring utf8ToWide(const std::string& s) {
     return out;
 }
 
-MessageHandler::MessageHandler(SubtitleManager* mgr) : mgr_(mgr) {}
+MessageHandler::MessageHandler(SubtitleManager* mgr, App* app) : mgr_(mgr), app_(app) {}
 
 void MessageHandler::dispatch(const std::string& raw) {
     try {
@@ -50,6 +51,12 @@ void MessageHandler::dispatch(const std::string& raw) {
 
         } else if (type == "reset") {
             mgr_->reset();
+
+        } else if (type == "font_size" && app_) {
+            int level = j.value("level", 5);
+            if (level < 1) level = 1;
+            if (level > 10) level = 10;
+            app_->setFontSizeLevel(level);
         }
     } catch (const json::exception&) {
         OutputDebugStringA("[MessageHandler] JSON parse error\n");

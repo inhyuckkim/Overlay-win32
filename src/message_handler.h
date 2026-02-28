@@ -2,12 +2,14 @@
 #include <string>
 
 class SubtitleManager;
+class App;
 
 class MessageHandler {
 public:
-    explicit MessageHandler(SubtitleManager* mgr);
+    MessageHandler(SubtitleManager* mgr, App* app);
     void dispatch(const std::string& json);
 
 private:
     SubtitleManager* mgr_;
+    App* app_;
 };

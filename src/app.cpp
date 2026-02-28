@@ -31,7 +31,7 @@ bool App::init(HINSTANCE hInstance) {
 
     subtitleManager_ = std::make_unique<SubtitleManager>();
 
-    messageHandler_ = std::make_unique<MessageHandler>(subtitleManager_.get());
+    messageHandler_ = std::make_unique<MessageHandler>(subtitleManager_.get(), this);
 
     wsClient_ = std::make_unique<WsClient>();
     wsClient_->setUrl("ws://127.0.0.1:3000/overlay");
@@ -75,4 +75,10 @@ void App::requestRedraw() {
     if (overlayWindow_ && overlayWindow_->hwnd()) {
         PostMessage(overlayWindow_->hwnd(), WM_OVERLAY_REDRAW, 0, 0);
     }
+}
+
+void App::setFontSizeLevel(int level) {
+    if (renderer_)
+        renderer_->setFontSizeLevel(level);
+    requestRedraw();
 }
