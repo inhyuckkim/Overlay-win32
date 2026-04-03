@@ -3,7 +3,7 @@
 
 class MenuButton {
 public:
-    bool create(HINSTANCE hInstance, int screenW, int screenH);
+    bool create(HINSTANCE hInstance, int screenW, int overlayBottomY);
     void destroy();
     HWND hwnd() const { return hwnd_; }
 

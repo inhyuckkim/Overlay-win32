@@ -91,6 +91,7 @@ void TestInput::sendText() {
 
     auto* mgr = App::instance().subtitleManager();
     if (mgr) {
+        mgr->addLanguage(L"test", L"Test");
         mgr->updateSubtitle(L"test", text, true);
         App::instance().requestRedraw();
     }

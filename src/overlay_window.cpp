@@ -8,7 +8,7 @@
 static constexpr wchar_t kClassName[] = L"LixorOverlayWnd";
 static constexpr int kOverlayHeight = 480;
 
-bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int screenH) {
+bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int overlayBottomY) {
     WNDCLASSEXW wc{};
     wc.cbSize        = sizeof(wc);
     wc.style         = CS_HREDRAW | CS_VREDRAW;
@@ -18,10 +18,10 @@ bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int screenH) {
     wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
     RegisterClassExW(&wc);
 
-    width_   = screenW;
-    height_  = kOverlayHeight;
-    screenH_ = screenH;
-    posY_    = screenH - height_;
+    width_           = screenW;
+    height_          = kOverlayHeight;
+    overlayBottomY_  = overlayBottomY;
+    posY_            = overlayBottomY_ - height_;
 
     hwnd_ = CreateWindowExW(
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
@@ -59,7 +59,7 @@ void OverlayWindow::reassertTopmost() {
 
 void OverlayWindow::setHeight(int h) {
     height_ = (h > 0 ? h : 0);
-    posY_   = screenH_ - height_;
+    posY_   = overlayBottomY_ - height_;
     if (hwnd_)
         SetWindowPos(hwnd_, nullptr, 0, posY_, width_, height_,
                      SWP_NOZORDER | SWP_NOACTIVATE);

@@ -17,10 +17,13 @@ bool App::init(HINSTANCE hInstance) {
     hInstance_ = hInstance;
 
     int screenW = GetSystemMetrics(SM_CXSCREEN);
-    int screenH = GetSystemMetrics(SM_CYSCREEN);
+    RECT workArea{};
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
+    static constexpr int kOverlayBottomPadding = 8;
+    int overlayBottomY = workArea.bottom - kOverlayBottomPadding;
 
     overlayWindow_ = std::make_unique<OverlayWindow>();
-    if (!overlayWindow_->create(hInstance, screenW, screenH))
+    if (!overlayWindow_->create(hInstance, screenW, overlayBottomY))
         return false;
 
     renderer_ = std::make_unique<Renderer>();
@@ -39,7 +42,7 @@ bool App::init(HINSTANCE hInstance) {
     wsClient_->start();
 
     menuButton_ = std::make_unique<MenuButton>();
-    menuButton_->create(hInstance, screenW, screenH);
+    menuButton_->create(hInstance, screenW, overlayBottomY);
 
     testInput_ = std::make_unique<TestInput>();
 

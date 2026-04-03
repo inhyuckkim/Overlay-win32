@@ -13,7 +13,7 @@ enum MenuCmd : UINT {
     CMD_EXIT,
 };
 
-bool MenuButton::create(HINSTANCE hInstance, int screenW, int screenH) {
+bool MenuButton::create(HINSTANCE hInstance, int screenW, int overlayBottomY) {
     WNDCLASSEXW wc{};
     wc.cbSize        = sizeof(wc);
     wc.style         = CS_HREDRAW | CS_VREDRAW;
@@ -24,7 +24,7 @@ bool MenuButton::create(HINSTANCE hInstance, int screenW, int screenH) {
     RegisterClassExW(&wc);
 
     int x = screenW - kSize - kMargin;
-    int y = screenH - kSize - kMargin;
+    int y = overlayBottomY - kSize - kMargin;
 
     hwnd_ = CreateWindowExW(
         WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED,
