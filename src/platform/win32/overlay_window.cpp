@@ -18,10 +18,10 @@ bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int overlayBottomY)
     wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
     RegisterClassExW(&wc);
 
-    width_           = screenW;
-    height_          = kOverlayHeight;
-    overlayBottomY_  = overlayBottomY;
-    posY_            = overlayBottomY_ - height_;
+    width_          = screenW;
+    height_         = kOverlayHeight;
+    overlayBottomY_ = overlayBottomY;
+    posY_           = overlayBottomY_ - height_;
 
     hwnd_ = CreateWindowExW(
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
@@ -32,7 +32,6 @@ bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int overlayBottomY)
 
     if (!hwnd_) return false;
 
-    // No SetLayeredWindowAttributes - we use UpdateLayeredWindow for per-pixel alpha
     return true;
 }
 
@@ -68,7 +67,6 @@ void OverlayWindow::setHeight(int h) {
 LRESULT CALLBACK OverlayWindow::wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_OVERLAY_MSG: {
-        // Heap-allocated string from WsClient background thread
         auto* payload = reinterpret_cast<std::string*>(lp);
         if (payload) {
             auto* handler = App::instance().messageHandler();
@@ -99,7 +97,6 @@ LRESULT CALLBACK OverlayWindow::wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
                 mgr->tick();
                 App::instance().requestRedraw();
             }
-            // Periodically re-assert topmost in case a fullscreen app stole focus
             auto* win = App::instance().overlayWindow();
             if (win) win->reassertTopmost();
         }

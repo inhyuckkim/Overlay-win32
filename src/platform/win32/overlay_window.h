@@ -2,7 +2,7 @@
 #include <windows.h>
 #include <functional>
 
-constexpr UINT WM_OVERLAY_MSG = WM_APP + 1;
+constexpr UINT WM_OVERLAY_MSG   = WM_APP + 1;
 constexpr UINT WM_OVERLAY_REDRAW = WM_APP + 2;
 
 class OverlayWindow {
@@ -24,9 +24,9 @@ public:
 private:
     static LRESULT CALLBACK wndProc(HWND, UINT, WPARAM, LPARAM);
 
-    HWND hwnd_ = nullptr;
-    int  width_   = 0;
-    int  height_  = 0;
-    int  posY_    = 0;
+    HWND hwnd_           = nullptr;
+    int  width_          = 0;
+    int  height_         = 0;
+    int  posY_           = 0;
     int  overlayBottomY_ = 0;
 };

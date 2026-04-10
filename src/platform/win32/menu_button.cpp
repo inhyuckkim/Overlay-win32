@@ -141,7 +141,6 @@ void MenuButton::paintButton(HDC hdc) {
     FillRect(hdc, &rc, bg);
     DeleteObject(bg);
 
-    // Draw "L" letter as icon
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, RGB(255, 255, 255));
     HFONT font = CreateFontW(20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,

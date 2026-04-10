@@ -15,9 +15,9 @@ private:
     void showPopupMenu();
     void paintButton(HDC hdc);
 
-    HWND hwnd_ = nullptr;
+    HWND hwnd_    = nullptr;
     bool hovered_ = false;
 
-    static constexpr int kSize = 36;
+    static constexpr int kSize   = 36;
     static constexpr int kMargin = 16;
 };

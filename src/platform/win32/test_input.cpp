@@ -1,6 +1,7 @@
 #include "test_input.h"
 #include "app.h"
 #include "subtitle_manager.h"
+#include <string>
 
 static constexpr wchar_t kTestInputClass[] = L"LixorTestInput";
 static constexpr int kPad = 10;
@@ -86,13 +87,19 @@ void TestInput::sendText() {
     int len = GetWindowTextLengthW(editHwnd_);
     if (len <= 0) return;
 
-    std::wstring text(len, L'\0');
-    GetWindowTextW(editHwnd_, text.data(), len + 1);
+    std::wstring wtext(static_cast<size_t>(len) + 1, L'\0');
+    GetWindowTextW(editHwnd_, wtext.data(), len + 1);
+    wtext.resize(static_cast<size_t>(len));
+
+    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wtext.c_str(), static_cast<int>(wtext.size()), nullptr, 0, nullptr, nullptr);
+    std::string text(static_cast<size_t>(utf8Len), '\0');
+    if (utf8Len > 0)
+        WideCharToMultiByte(CP_UTF8, 0, wtext.c_str(), static_cast<int>(wtext.size()), text.data(), utf8Len, nullptr, nullptr);
 
     auto* mgr = App::instance().subtitleManager();
     if (mgr) {
-        mgr->addLanguage(L"test", L"Test");
-        mgr->updateSubtitle(L"test", text, true);
+        mgr->addLanguage("test", "Test");
+        mgr->updateSubtitle("test", text, true);
         App::instance().requestRedraw();
     }
 

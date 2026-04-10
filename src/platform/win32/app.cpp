@@ -1,4 +1,5 @@
 #include "app.h"
+#include "app_callbacks.h"
 #include "overlay_window.h"
 #include "renderer.h"
 #include "subtitle_manager.h"
@@ -34,11 +35,20 @@ bool App::init(HINSTANCE hInstance) {
 
     subtitleManager_ = std::make_unique<SubtitleManager>();
 
-    messageHandler_ = std::make_unique<MessageHandler>(subtitleManager_.get(), this);
+    messageHandler_ = std::make_unique<MessageHandler>(
+        subtitleManager_.get(),
+        AppCallbacks{
+            [this](int level) { setFontSizeLevel(level); },
+            [this]() { requestRedraw(); },
+        });
 
     wsClient_ = std::make_unique<WsClient>();
     wsClient_->setUrl("ws://127.0.0.1:3000/overlay");
-    wsClient_->setTargetHwnd(overlayWindow_->hwnd());
+    HWND hwnd = overlayWindow_->hwnd();
+    wsClient_->setMessageDeliverer([hwnd](std::string payload) {
+        auto* copy = new std::string(std::move(payload));
+        PostMessage(hwnd, WM_OVERLAY_MSG, 0, reinterpret_cast<LPARAM>(copy));
+    });
     wsClient_->start();
 
     menuButton_ = std::make_unique<MenuButton>();

@@ -1,1 +1,10 @@
+# CMake build trees
 build/
+build-*/
+cmake-build-*/
+out/
+
+# IDE / OS
+.vs/
+.idea/
+.DS_Store

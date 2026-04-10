@@ -4,6 +4,15 @@
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
 
+static std::wstring utf8ToWide(const std::string& s) {
+    if (s.empty()) return {};
+    int len = MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
+    if (len <= 0) return {};
+    std::wstring out(static_cast<size_t>(len), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), out.data(), len);
+    return out;
+}
+
 bool Renderer::init(HWND hwnd, int width, int height) {
     hwnd_   = hwnd;
     width_  = width;
@@ -23,9 +32,8 @@ bool Renderer::init(HWND hwnd, int width, int height) {
 }
 
 void Renderer::createTextFormats() {
-    // Level 1 → 12pt, level 10 → 32pt (level 5 ≈ 22pt)
     fontSize_  = 12.0f + (fontSizeLevel_ - 1) * (20.0f / 9.0f);
-    labelSize_ = fontSize_ * (13.0f / 22.0f);  // keep same ratio as original 13/22
+    labelSize_ = fontSize_ * (13.0f / 22.0f);
 
     textFormat_.Reset();
     textFormatLeading_.Reset();
@@ -107,22 +115,25 @@ int Renderer::measureHeight(const std::vector<SubtitleBlock>& blocks) const {
 
     float maxTextWidth = width_ > 0 ? width_ * 0.85f : 800.0f;
     float totalH       = 0.0f;
-    int   count       = 0;
+    int   count        = 0;
 
     for (const auto& b : blocks) {
         if (b.text.empty()) continue;
 
+        std::wstring wtext = utf8ToWide(b.text);
+        if (wtext.empty()) continue;
+
         ComPtr<IDWriteTextLayout> layout;
         HRESULT hr = dwFactory_->CreateTextLayout(
-            b.text.c_str(), static_cast<UINT32>(b.text.size()),
+            wtext.c_str(), static_cast<UINT32>(wtext.size()),
             textFormat_.Get(), maxTextWidth, 1000.0f,
             layout.GetAddressOf());
         if (FAILED(hr) || !layout) continue;
 
         DWRITE_TEXT_METRICS metrics{};
         layout->GetMetrics(&metrics);
-        float lineH  = fontSize_ * 1.3f;
-        float textH  = (std::min)(metrics.height + 4.0f, lineH * 4.0f);
+        float lineH = fontSize_ * 1.3f;
+        float textH = (std::min)(metrics.height + 4.0f, lineH * 4.0f);
         float labelH = labelSize_ + 4.0f;
         float blockH = kBlockPadV + labelH + textH + kBlockPadV;
 
@@ -173,15 +184,18 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
 
     if (!blocks.empty()) {
         float maxTextWidth = width_ * 0.85f;
-        float curY = static_cast<float>(height_);
+        float curY         = static_cast<float>(height_);
 
         for (int i = 0; i < static_cast<int>(blocks.size()); ++i) {
             const auto& b = blocks[i];
             if (b.text.empty()) continue;
 
+            std::wstring wtext = utf8ToWide(b.text);
+            if (wtext.empty()) continue;
+
             ComPtr<IDWriteTextLayout> measureLayout;
             dwFactory_->CreateTextLayout(
-                b.text.c_str(), static_cast<UINT32>(b.text.size()),
+                wtext.c_str(), static_cast<UINT32>(wtext.size()),
                 textFormat_.Get(), maxTextWidth, 1000.0f,
                 measureLayout.GetAddressOf());
             if (!measureLayout) continue;
@@ -194,7 +208,7 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
             float labelH = labelSize_ + 4.0f;
             float blockH = kBlockPadV + labelH + textH + kBlockPadV;
             float blockW = (std::min)(metrics.widthIncludingTrailingWhitespace + kBlockPadH * 2, static_cast<float>(width_));
-            blockW = (std::max)(blockW, 200.0f);
+            blockW       = (std::max)(blockW, 200.0f);
             float blockX = (width_ - blockW) * 0.5f;
 
             curY -= blockH + kBlockGap;
@@ -211,7 +225,8 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
             D2D1_RECT_F labelRect = D2D1::RectF(
                 blockX + kBlockPadH, curY + kBlockPadV,
                 blockX + blockW - kBlockPadH, curY + kBlockPadV + labelH);
-            rt_->DrawText(b.label.c_str(), static_cast<UINT32>(b.label.size()),
+            std::wstring wlabel = utf8ToWide(b.label);
+            rt_->DrawText(wlabel.c_str(), static_cast<UINT32>(wlabel.size()),
                           labelFormat_.Get(), labelRect, labelBrush_.Get());
 
             textBrush_->SetOpacity(opacity);
@@ -220,7 +235,7 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
 
             ComPtr<IDWriteTextLayout> drawLayout;
             dwFactory_->CreateTextLayout(
-                b.text.c_str(), static_cast<UINT32>(b.text.size()),
+                wtext.c_str(), static_cast<UINT32>(wtext.size()),
                 textFormatLeading_.Get(), maxTextWidth, textH,
                 drawLayout.GetAddressOf());
             if (drawLayout) {
@@ -239,7 +254,6 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
         return;
     }
 
-    // Commit to screen via UpdateLayeredWindow
     RECT winRect;
     GetWindowRect(hwnd_, &winRect);
     POINT ptPos{winRect.left, winRect.top};
@@ -258,6 +272,4 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
     ReleaseDC(nullptr, screenDC);
 }
 
-void Renderer::updateLayered(HWND, int, int) {
-    // Handled inline in render() for single-pass efficiency
-}
+void Renderer::updateLayered(HWND, int, int) {}

@@ -1,0 +1,42 @@
+#pragma once
+#include <memory>
+
+class OverlayWindow;
+class Renderer;
+class SubtitleManager;
+class WsClient;
+class MessageHandler;
+class MenuButton;
+
+class App {
+public:
+    static App& instance();
+
+    bool init();
+    void shutdown();
+
+    void requestRedraw();
+
+    void setFontSizeLevel(int level);
+
+    void subtitleTimerFired();
+
+    OverlayWindow*   overlayWindow() const { return overlayWindow_.get(); }
+    Renderer*        renderer() const { return renderer_.get(); }
+    SubtitleManager* subtitleManager() const { return subtitleManager_.get(); }
+    WsClient*        wsClient() const { return wsClient_.get(); }
+    MessageHandler*  messageHandler() const { return messageHandler_.get(); }
+    MenuButton*      menuButton() const { return menuButton_.get(); }
+
+private:
+    App() = default;
+
+    void performRedraw();
+
+    std::unique_ptr<OverlayWindow>   overlayWindow_;
+    std::unique_ptr<Renderer>        renderer_;
+    std::unique_ptr<SubtitleManager> subtitleManager_;
+    std::unique_ptr<WsClient>        wsClient_;
+    std::unique_ptr<MessageHandler>  messageHandler_;
+    std::unique_ptr<MenuButton>      menuButton_;
+};

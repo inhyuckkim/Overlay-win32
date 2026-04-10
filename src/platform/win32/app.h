@@ -1,6 +1,6 @@
 #pragma once
-#include <windows.h>
 #include <memory>
+#include <windows.h>
 
 class OverlayWindow;
 class Renderer;
@@ -18,14 +18,14 @@ public:
     int  run();
     void shutdown();
 
-    HINSTANCE       hInstance() const { return hInstance_; }
-    OverlayWindow*  overlayWindow() const { return overlayWindow_.get(); }
-    Renderer*       renderer() const { return renderer_.get(); }
+    HINSTANCE        hInstance() const { return hInstance_; }
+    OverlayWindow*   overlayWindow() const { return overlayWindow_.get(); }
+    Renderer*        renderer() const { return renderer_.get(); }
     SubtitleManager* subtitleManager() const { return subtitleManager_.get(); }
-    WsClient*       wsClient() const { return wsClient_.get(); }
-    MessageHandler* messageHandler() const { return messageHandler_.get(); }
-    MenuButton*     menuButton() const { return menuButton_.get(); }
-    TestInput*      testInput() const { return testInput_.get(); }
+    WsClient*        wsClient() const { return wsClient_.get(); }
+    MessageHandler*  messageHandler() const { return messageHandler_.get(); }
+    MenuButton*      menuButton() const { return menuButton_.get(); }
+    TestInput*       testInput() const { return testInput_.get(); }
 
     void requestRedraw();
 
@@ -35,6 +35,7 @@ private:
     App() = default;
 
     HINSTANCE hInstance_ = nullptr;
+
     std::unique_ptr<OverlayWindow>   overlayWindow_;
     std::unique_ptr<Renderer>        renderer_;
     std::unique_ptr<SubtitleManager> subtitleManager_;

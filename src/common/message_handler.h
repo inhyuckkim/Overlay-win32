@@ -1,15 +1,17 @@
 #pragma once
 #include <string>
 
+#include "app_callbacks.h"
+
 class SubtitleManager;
-class App;
 
 class MessageHandler {
 public:
-    MessageHandler(SubtitleManager* mgr, App* app);
+    MessageHandler(SubtitleManager* mgr, AppCallbacks callbacks);
+
     void dispatch(const std::string& json);
 
 private:
     SubtitleManager* mgr_;
-    App* app_;
+    AppCallbacks     callbacks_;
 };
