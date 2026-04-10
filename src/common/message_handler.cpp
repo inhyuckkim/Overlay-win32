@@ -1,6 +1,5 @@
 #include "message_handler.h"
 #include "subtitle_manager.h"
-#include <iostream>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -50,6 +49,5 @@ void MessageHandler::dispatch(const std::string& raw) {
             if (callbacks_.setFontSizeLevel) callbacks_.setFontSizeLevel(level);
         }
     } catch (const json::exception&) {
-        std::cerr << "[MessageHandler] JSON parse error\n";
     }
 }

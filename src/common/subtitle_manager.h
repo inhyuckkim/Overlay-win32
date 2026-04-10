@@ -7,7 +7,8 @@
 class SubtitleManager {
 public:
     static constexpr int     kMaxLanguages    = 4;
-    static constexpr uint32_t kAutoHideMs     = 5000;
+    /** Hide each language line after no updates for this long (Windows was historically ~5s). */
+    static constexpr uint32_t kAutoHideMs = 5000;
     static constexpr uint32_t kTimerIntervalMs = 500;
     static constexpr int     kTimerId         = 100;
 
@@ -20,6 +21,7 @@ public:
 
     bool isVisible() const { return overlayVisible_; }
     void setVisible(bool v) { overlayVisible_ = v; }
+    int languageCount() const { return static_cast<int>(slots_.size()); }
 
     std::vector<SubtitleBlock> getVisibleBlocks() const;
 

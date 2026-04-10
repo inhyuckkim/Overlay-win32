@@ -59,12 +59,18 @@ bool OverlayWindow::create(int screenW, int overlayBottomY) {
 
     [panel setOpaque:NO];
     [panel setBackgroundColor:[NSColor clearColor]];
-    [panel setLevel:NSFloatingWindowLevel];
+    // Above typical document windows so a click in another app does not bury the overlay behind it.
+    [panel setLevel:NSStatusWindowLevel];
     [panel setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces |
                                  NSWindowCollectionBehaviorFullScreenAuxiliary];
     [panel setIgnoresMouseEvents:YES];
     [panel setHasShadow:NO];
     [panel setReleasedWhenClosed:NO];
+    // Default NSPanel behavior: hide when this app is no longer active. LixorOverlay is an
+    // accessory app; clicking the browser activates Chrome/Safari and we resign active — the
+    // panel would disappear immediately even though subtitles should stay. HUD-style overlay
+    // must remain visible across app activation changes.
+    [panel setHidesOnDeactivate:NO];
 
     LixorOverlayView* view = [[LixorOverlayView alloc] initWithFrame:NSMakeRect(0, 0, contentRect.size.width, contentRect.size.height)];
     impl_->view = view;
@@ -95,7 +101,7 @@ void OverlayWindow::hide() {
 
 void OverlayWindow::reassertTopmost() {
     if (impl_->panel) {
-        [impl_->panel setLevel:NSFloatingWindowLevel];
+        [impl_->panel setLevel:NSStatusWindowLevel];
         [impl_->panel orderFrontRegardless];
     }
 }

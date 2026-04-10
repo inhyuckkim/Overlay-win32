@@ -1,6 +1,4 @@
 #include "ws_client.h"
-#include <dispatch/dispatch.h>
-#include <iostream>
 
 void WsClient::setUrl(const std::string& url) {
     ws_.setUrl(url);
@@ -15,12 +13,6 @@ void WsClient::start() {
         if (msg->type == ix::WebSocketMessageType::Message) {
             std::string payload = msg->str;
             if (deliver_) deliver_(std::move(payload));
-        } else if (msg->type == ix::WebSocketMessageType::Open) {
-            std::cerr << "[WsClient] Connected\n";
-        } else if (msg->type == ix::WebSocketMessageType::Close) {
-            std::cerr << "[WsClient] Disconnected\n";
-        } else if (msg->type == ix::WebSocketMessageType::Error) {
-            std::cerr << "[WsClient] Error: " << msg->errorInfo.reason << "\n";
         }
     });
 

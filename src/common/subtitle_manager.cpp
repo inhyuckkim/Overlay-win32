@@ -47,9 +47,9 @@ void SubtitleManager::updateTranslation(const std::string& targetLang,
     LanguageSlot* slot = findSlot(targetLang);
     if (!slot) return;
 
-    slot->finalText      = text;
+    slot->finalText        = text;
     slot->interimText.clear();
-    slot->visible        = true;
+    slot->visible          = true;
     slot->lastUpdateTickMs = nowMsSinceEpoch();
 }
 
