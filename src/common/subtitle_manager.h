@@ -1,5 +1,6 @@
 #pragma once
 #include "types.h"
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -7,8 +8,14 @@
 class SubtitleManager {
 public:
     static constexpr int     kMaxLanguages    = 4;
-    /** Hide each language line after no updates for this long (Windows was historically ~5s). */
-    static constexpr uint32_t kAutoHideMs = 5000;
+    static constexpr uint32_t kAppendGapMs = 3500;
+    static constexpr size_t   kAppendMaxChars = 15;
+    static constexpr size_t   kMaxCombinedChars = 120;
+    static constexpr uint32_t kMinDurationMs = 3500;
+    static constexpr uint32_t kMaxDurationMs = 14000;
+    static constexpr uint32_t kDurationBaseMs = 2500;
+    static constexpr uint32_t kDurationPerCharMs = 110;
+    static constexpr uint32_t kInterimBaselineMs = 4000;
     static constexpr uint32_t kTimerIntervalMs = 500;
     static constexpr int     kTimerId         = 100;
 

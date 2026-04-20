@@ -1,11 +1,53 @@
 #include "subtitle_manager.h"
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 
 static uint64_t nowMsSinceEpoch() {
     using namespace std::chrono;
     return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
 }
+
+namespace {
+size_t utf8CharCount(const std::string& s) {
+    size_t count = 0;
+    for (unsigned char c : s) {
+        if ((c & 0xC0u) != 0x80u) ++count;
+    }
+    return count;
+}
+
+std::string utf8TrimFront(const std::string& s, size_t keepChars) {
+    const size_t totalChars = utf8CharCount(s);
+    if (totalChars <= keepChars) return s;
+
+    const size_t skipChars = totalChars - keepChars;
+    size_t skipped = 0;
+    size_t bytePos = 0;
+
+    while (bytePos < s.size() && skipped < skipChars) {
+        unsigned char c = static_cast<unsigned char>(s[bytePos]);
+        if ((c & 0xC0u) != 0x80u) ++skipped;
+        ++bytePos;
+    }
+
+    while (bytePos < s.size()) {
+        unsigned char c = static_cast<unsigned char>(s[bytePos]);
+        if ((c & 0xC0u) != 0x80u) break;
+        ++bytePos;
+    }
+
+    return s.substr(bytePos);
+}
+
+uint64_t durationForText(size_t charCount) {
+    uint64_t duration = static_cast<uint64_t>(SubtitleManager::kDurationBaseMs) +
+                        static_cast<uint64_t>(charCount) * SubtitleManager::kDurationPerCharMs;
+    duration = (std::max)(duration, static_cast<uint64_t>(SubtitleManager::kMinDurationMs));
+    duration = (std::min)(duration, static_cast<uint64_t>(SubtitleManager::kMaxDurationMs));
+    return duration;
+}
+} // namespace
 
 void SubtitleManager::addLanguage(const std::string& code, const std::string& label) {
     if (findSlot(code)) return;
@@ -16,6 +58,8 @@ void SubtitleManager::addLanguage(const std::string& code, const std::string& la
     slot.label            = label;
     slot.visible          = true;
     slot.lastUpdateTickMs = nowMsSinceEpoch();
+    slot.lastFinalAtMs    = 0;
+    slot.hideAtMs         = 0;
     slots_.push_back(std::move(slot));
 }
 
@@ -32,14 +76,44 @@ void SubtitleManager::updateSubtitle(const std::string& langCode,
     LanguageSlot* slot = findSlot(langCode);
     if (!slot) return;
 
+    const uint64_t now      = nowMsSinceEpoch();
+    const size_t   newChars = utf8CharCount(text);
+
     if (isFinal) {
-        slot->finalText = text;
+        const bool hasPrevFinal = !slot->finalText.empty();
+        const bool isSmallGap   = (now - slot->lastFinalAtMs) <= kAppendGapMs;
+        const bool isShortFinal = newChars <= kAppendMaxChars;
+
+        if (hasPrevFinal && isSmallGap && isShortFinal) {
+            if (!slot->finalText.empty() && !text.empty()) {
+                slot->finalText += " ";
+            }
+            slot->finalText += text;
+
+            size_t combinedChars = utf8CharCount(slot->finalText);
+            if (combinedChars > kMaxCombinedChars) {
+                slot->finalText = utf8TrimFront(slot->finalText, kMaxCombinedChars);
+                combinedChars   = kMaxCombinedChars;
+            }
+            slot->hideAtMs = now + durationForText(combinedChars);
+        } else {
+            slot->finalText = text;
+            slot->hideAtMs  = now + durationForText(newChars);
+        }
+
         slot->interimText.clear();
+        slot->lastFinalAtMs = now;
     } else {
+        const bool finalStillVisible = !slot->finalText.empty() && slot->hideAtMs > now;
+        const bool shortInterim      = newChars <= kAppendMaxChars;
+        if (finalStillVisible && shortInterim) return;
+
         slot->interimText = text;
+        slot->hideAtMs    = now + kInterimBaselineMs;
     }
+
     slot->visible          = true;
-    slot->lastUpdateTickMs = nowMsSinceEpoch();
+    slot->lastUpdateTickMs = now;
 }
 
 void SubtitleManager::updateTranslation(const std::string& targetLang,
@@ -47,10 +121,33 @@ void SubtitleManager::updateTranslation(const std::string& targetLang,
     LanguageSlot* slot = findSlot(targetLang);
     if (!slot) return;
 
-    slot->finalText        = text;
+    const uint64_t now     = nowMsSinceEpoch();
+    const size_t textChars = utf8CharCount(text);
+    const bool hasPrevFinal = !slot->finalText.empty();
+    const bool isSmallGap   = (now - slot->lastFinalAtMs) <= kAppendGapMs;
+    const bool isShortFinal = textChars <= kAppendMaxChars;
+
+    if (hasPrevFinal && isSmallGap && isShortFinal) {
+        if (!slot->finalText.empty() && !text.empty()) {
+            slot->finalText += " ";
+        }
+        slot->finalText += text;
+
+        size_t combinedChars = utf8CharCount(slot->finalText);
+        if (combinedChars > kMaxCombinedChars) {
+            slot->finalText = utf8TrimFront(slot->finalText, kMaxCombinedChars);
+            combinedChars   = kMaxCombinedChars;
+        }
+        slot->hideAtMs = now + durationForText(combinedChars);
+    } else {
+        slot->finalText = text;
+        slot->hideAtMs  = now + durationForText(textChars);
+    }
+
     slot->interimText.clear();
+    slot->lastFinalAtMs    = now;
     slot->visible          = true;
-    slot->lastUpdateTickMs = nowMsSinceEpoch();
+    slot->lastUpdateTickMs = now;
 }
 
 void SubtitleManager::reset() {
@@ -60,7 +157,7 @@ void SubtitleManager::reset() {
 void SubtitleManager::tick() {
     const uint64_t now = nowMsSinceEpoch();
     for (auto& slot : slots_) {
-        if (slot.visible && (now - slot.lastUpdateTickMs) > kAutoHideMs) {
+        if (slot.visible && slot.hideAtMs > 0 && now >= slot.hideAtMs) {
             slot.visible = false;
         }
     }

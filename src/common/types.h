@@ -16,4 +16,6 @@ struct LanguageSlot {
     std::string finalText;
     bool        visible = true;
     uint64_t    lastUpdateTickMs = 0;
+    uint64_t    lastFinalAtMs = 0;
+    uint64_t    hideAtMs = 0;
 };
