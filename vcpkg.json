@@ -1,7 +1,7 @@
 {
   "name": "lixor-overlay",
   "version": "1.0.0",
-  "description": "Lixor native subtitle overlay for Windows",
+  "description": "Lixor native subtitle overlay (Windows and macOS; CMake builds from source)",
   "dependencies": [
     "ixwebsocket",
     "nlohmann-json"
