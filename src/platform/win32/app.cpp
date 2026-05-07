@@ -20,7 +20,8 @@ bool App::init(HINSTANCE hInstance) {
     int screenW = GetSystemMetrics(SM_CXSCREEN);
     RECT workArea{};
     SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
-    static constexpr int kOverlayBottomPadding = 8;
+    /** Pixels above work-area bottom; keep small so captions sit just above the taskbar. */
+    static constexpr int kOverlayBottomPadding = 2;
     int overlayBottomY = workArea.bottom - kOverlayBottomPadding;
 
     overlayWindow_ = std::make_unique<OverlayWindow>();

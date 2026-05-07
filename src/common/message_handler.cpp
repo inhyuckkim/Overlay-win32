@@ -21,7 +21,8 @@ void MessageHandler::dispatch(const std::string& raw) {
         } else if (type == "translation") {
             std::string targetLang = j.value("targetLanguage", "");
             std::string text       = j.value("text", "");
-            mgr_->updateTranslation(targetLang, text);
+            bool isFinal           = j.value("isFinal", true);
+            mgr_->updateTranslation(targetLang, text, isFinal);
 
         } else if (type == "add_language") {
             std::string lang  = j.value("language", "");

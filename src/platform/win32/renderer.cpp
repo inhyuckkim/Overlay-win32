@@ -32,7 +32,7 @@ bool Renderer::init(HWND hwnd, int width, int height) {
 }
 
 void Renderer::createTextFormats() {
-    fontSize_  = 12.0f + (fontSizeLevel_ - 1) * (20.0f / 9.0f);
+    fontSize_  = 18.0f + (fontSizeLevel_ - 1) * (42.0f / 9.0f);
     labelSize_ = fontSize_ * (13.0f / 22.0f);
 
     textFormat_.Reset();
@@ -134,8 +134,7 @@ int Renderer::measureHeight(const std::vector<SubtitleBlock>& blocks) const {
         layout->GetMetrics(&metrics);
         float lineH = fontSize_ * 1.3f;
         float textH = (std::min)(metrics.height + 4.0f, lineH * 4.0f);
-        float labelH = labelSize_ + 4.0f;
-        float blockH = kBlockPadV + labelH + textH + kBlockPadV;
+        float blockH = kBlockPadV + textH + kBlockPadV;
 
         if (count > 0) totalH += kBlockGap;
         totalH += blockH;
@@ -205,8 +204,7 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
             float lineH = fontSize_ * 1.3f;
             float textH = (std::min)(metrics.height + 4.0f, lineH * 4.0f);
 
-            float labelH = labelSize_ + 4.0f;
-            float blockH = kBlockPadV + labelH + textH + kBlockPadV;
+            float blockH = kBlockPadV + textH + kBlockPadV;
             float blockW = (std::min)(metrics.widthIncludingTrailingWhitespace + kBlockPadH * 2, static_cast<float>(width_));
             blockW       = (std::max)(blockW, 200.0f);
             float blockX = (width_ - blockW) * 0.5f;
@@ -221,16 +219,8 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
                 kCornerRadius, kCornerRadius);
             rt_->FillRoundedRectangle(rrect, bgBrush_.Get());
 
-            labelBrush_->SetOpacity(opacity * 0.8f);
-            D2D1_RECT_F labelRect = D2D1::RectF(
-                blockX + kBlockPadH, curY + kBlockPadV,
-                blockX + blockW - kBlockPadH, curY + kBlockPadV + labelH);
-            std::wstring wlabel = utf8ToWide(b.label);
-            rt_->DrawText(wlabel.c_str(), static_cast<UINT32>(wlabel.size()),
-                          labelFormat_.Get(), labelRect, labelBrush_.Get());
-
             textBrush_->SetOpacity(opacity);
-            float textY = curY + kBlockPadV + labelH;
+            float textY = curY + kBlockPadV;
             D2D1_POINT_2F origin{blockX + kBlockPadH, textY};
 
             ComPtr<IDWriteTextLayout> drawLayout;

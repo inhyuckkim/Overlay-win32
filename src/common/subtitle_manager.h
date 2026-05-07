@@ -22,7 +22,7 @@ public:
     void addLanguage(const std::string& code, const std::string& label);
     void removeLanguage(const std::string& code);
     void updateSubtitle(const std::string& langCode, const std::string& text, bool isFinal);
-    void updateTranslation(const std::string& targetLang, const std::string& text);
+    void updateTranslation(const std::string& targetLang, const std::string& text, bool isFinal);
     void reset();
     void tick();
 

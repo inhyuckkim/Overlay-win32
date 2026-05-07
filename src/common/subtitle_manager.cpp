@@ -117,35 +117,47 @@ void SubtitleManager::updateSubtitle(const std::string& langCode,
 }
 
 void SubtitleManager::updateTranslation(const std::string& targetLang,
-                                        const std::string& text) {
+                                        const std::string& text,
+                                        bool isFinal) {
     LanguageSlot* slot = findSlot(targetLang);
     if (!slot) return;
 
-    const uint64_t now     = nowMsSinceEpoch();
-    const size_t textChars = utf8CharCount(text);
-    const bool hasPrevFinal = !slot->finalText.empty();
-    const bool isSmallGap   = (now - slot->lastFinalAtMs) <= kAppendGapMs;
-    const bool isShortFinal = textChars <= kAppendMaxChars;
+    const uint64_t now      = nowMsSinceEpoch();
+    const size_t   newChars = utf8CharCount(text);
 
-    if (hasPrevFinal && isSmallGap && isShortFinal) {
-        if (!slot->finalText.empty() && !text.empty()) {
-            slot->finalText += " ";
-        }
-        slot->finalText += text;
+    if (isFinal) {
+        const bool hasPrevFinal = !slot->finalText.empty();
+        const bool isSmallGap   = (now - slot->lastFinalAtMs) <= kAppendGapMs;
+        const bool isShortFinal = newChars <= kAppendMaxChars;
 
-        size_t combinedChars = utf8CharCount(slot->finalText);
-        if (combinedChars > kMaxCombinedChars) {
-            slot->finalText = utf8TrimFront(slot->finalText, kMaxCombinedChars);
-            combinedChars   = kMaxCombinedChars;
+        if (hasPrevFinal && isSmallGap && isShortFinal) {
+            if (!slot->finalText.empty() && !text.empty()) {
+                slot->finalText += " ";
+            }
+            slot->finalText += text;
+
+            size_t combinedChars = utf8CharCount(slot->finalText);
+            if (combinedChars > kMaxCombinedChars) {
+                slot->finalText = utf8TrimFront(slot->finalText, kMaxCombinedChars);
+                combinedChars   = kMaxCombinedChars;
+            }
+            slot->hideAtMs = now + durationForText(combinedChars);
+        } else {
+            slot->finalText = text;
+            slot->hideAtMs  = now + durationForText(newChars);
         }
-        slot->hideAtMs = now + durationForText(combinedChars);
+
+        slot->interimText.clear();
+        slot->lastFinalAtMs = now;
     } else {
-        slot->finalText = text;
-        slot->hideAtMs  = now + durationForText(textChars);
+        const bool finalStillVisible = !slot->finalText.empty() && slot->hideAtMs > now;
+        const bool shortInterim      = newChars <= kAppendMaxChars;
+        if (finalStillVisible && shortInterim) return;
+
+        slot->interimText = text;
+        slot->hideAtMs    = now + kInterimBaselineMs;
     }
 
-    slot->interimText.clear();
-    slot->lastFinalAtMs    = now;
     slot->visible          = true;
     slot->lastUpdateTickMs = now;
 }
@@ -175,7 +187,7 @@ std::vector<SubtitleBlock> SubtitleManager::getVisibleBlocks() const {
 
         if (!slot.interimText.empty()) {
             block.text      = slot.interimText;
-            block.opacity   = 0.55f;
+            block.opacity   = 0.70f;
             block.isInterim = true;
         } else if (!slot.finalText.empty()) {
             block.text      = slot.finalText;
