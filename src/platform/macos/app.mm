@@ -10,6 +10,43 @@
 #include "ws_client.h"
 #include "menu_button.h"
 
+// ---------------------------------------------------------------------------
+// Config: read ws_url from lixorhost.conf next to the .app bundle.
+// Format (plain text):
+//   ws_url = wss://lixorhost.datant.ca/overlay
+// Lines starting with '#' are comments. Absent or malformed → localhost default.
+// ---------------------------------------------------------------------------
+static std::string readWsUrlFromConfig() {
+    const std::string kDefault = "ws://127.0.0.1:3000/overlay";
+
+    NSString* bundlePath = [[NSBundle mainBundle] bundlePath]; // …/LixorOverlay.app
+    NSString* appDir = [bundlePath stringByDeletingLastPathComponent];
+    NSString* configPath = [appDir stringByAppendingPathComponent:@"lixorhost.conf"];
+
+    NSString* contents = [NSString stringWithContentsOfFile:configPath
+                                                   encoding:NSUTF8StringEncoding
+                                                      error:nil];
+    if (!contents) return kDefault;
+
+    NSArray<NSString*>* lines = [contents componentsSeparatedByCharactersInSet:
+                                 [NSCharacterSet newlineCharacterSet]];
+    for (NSString* line in lines) {
+        NSString* t = [line stringByTrimmingCharactersInSet:
+                       [NSCharacterSet whitespaceCharacterSet]];
+        if (t.length == 0 || [t hasPrefix:@"#"]) continue;
+        if ([t hasPrefix:@"ws_url"]) {
+            NSRange eq = [t rangeOfString:@"="];
+            if (eq.location != NSNotFound) {
+                NSString* val = [[t substringFromIndex:eq.location + 1]
+                                 stringByTrimmingCharactersInSet:
+                                 [NSCharacterSet whitespaceCharacterSet]];
+                if (val.length > 0) return std::string(val.UTF8String);
+            }
+        }
+    }
+    return kDefault;
+}
+
 App& App::instance() {
     static App app;
     return app;
@@ -41,7 +78,7 @@ bool App::init() {
         });
 
     wsClient_ = std::make_unique<WsClient>();
-    wsClient_->setUrl("ws://127.0.0.1:3000/overlay");
+    wsClient_->setUrl(readWsUrlFromConfig());
     wsClient_->setMessageDeliverer([this](std::string payload) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if (messageHandler_) messageHandler_->dispatch(payload);

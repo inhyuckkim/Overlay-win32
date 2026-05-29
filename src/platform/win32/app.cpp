@@ -8,6 +8,47 @@
 #include "menu_button.h"
 #include "test_input.h"
 #include <string>
+#include <fstream>
+#include <windows.h>
+
+// ---------------------------------------------------------------------------
+// Config: read ws_url from lixorhost.conf next to the .exe.
+// Format (plain text):
+//   ws_url = wss://lixorhost.datant.ca/overlay
+// Lines starting with '#' are comments. Absent or malformed → localhost default.
+// ---------------------------------------------------------------------------
+static std::string readWsUrlFromConfig() {
+    const std::string kDefault = "ws://127.0.0.1:3000/overlay";
+
+    wchar_t exePath[MAX_PATH] = {};
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    std::wstring exeDir(exePath);
+    auto sep = exeDir.rfind(L'\\');
+    if (sep != std::wstring::npos) exeDir = exeDir.substr(0, sep);
+
+    std::ifstream file(exeDir + L"\\lixorhost.conf");
+    if (!file.is_open()) return kDefault;
+
+    std::string line;
+    while (std::getline(file, line)) {
+        // Trim leading whitespace
+        auto start = line.find_first_not_of(" \t");
+        if (start == std::string::npos) continue;
+        line = line.substr(start);
+        if (line.empty() || line[0] == '#') continue;
+        if (line.find("ws_url") == 0) {
+            auto eq = line.find('=');
+            if (eq != std::string::npos) {
+                std::string val = line.substr(eq + 1);
+                auto vs = val.find_first_not_of(" \t");
+                auto ve = val.find_last_not_of(" \t\r\n");
+                if (vs != std::string::npos)
+                    return val.substr(vs, ve - vs + 1);
+            }
+        }
+    }
+    return kDefault;
+}
 
 App& App::instance() {
     static App app;
@@ -44,7 +85,7 @@ bool App::init(HINSTANCE hInstance) {
         });
 
     wsClient_ = std::make_unique<WsClient>();
-    wsClient_->setUrl("ws://127.0.0.1:3000/overlay");
+    wsClient_->setUrl(readWsUrlFromConfig());
     HWND hwnd = overlayWindow_->hwnd();
     wsClient_->setMessageDeliverer([hwnd](std::string payload) {
         auto* copy = new std::string(std::move(payload));
