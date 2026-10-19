@@ -13,7 +13,7 @@ enum MenuCmd : UINT {
     CMD_EXIT,
 };
 
-bool MenuButton::create(HINSTANCE hInstance, int screenW, int overlayBottomY) {
+bool MenuButton::create(HINSTANCE hInstance, int screenX, int screenW, int overlayBottomY) {
     WNDCLASSEXW wc{};
     wc.cbSize        = sizeof(wc);
     wc.style         = CS_HREDRAW | CS_VREDRAW;
@@ -23,7 +23,7 @@ bool MenuButton::create(HINSTANCE hInstance, int screenW, int overlayBottomY) {
     wc.hCursor       = LoadCursor(nullptr, IDC_HAND);
     RegisterClassExW(&wc);
 
-    int x = screenW - kSize - kMargin;
+    int x = screenX + screenW - kSize - kMargin;
     int y = overlayBottomY - kSize - kMargin;
 
     hwnd_ = CreateWindowExW(
@@ -52,6 +52,13 @@ void MenuButton::show() {
 
 void MenuButton::hide() {
     ShowWindow(hwnd_, SW_HIDE);
+}
+
+void MenuButton::moveTo(int screenX, int screenW, int overlayBottomY) {
+    if (!hwnd_) return;
+    int x = screenX + screenW - kSize - kMargin;
+    int y = overlayBottomY - kSize - kMargin;
+    SetWindowPos(hwnd_, nullptr, x, y, kSize, kSize, SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
 LRESULT CALLBACK MenuButton::wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {

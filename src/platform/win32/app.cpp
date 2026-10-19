@@ -7,6 +7,7 @@
 #include "message_handler.h"
 #include "menu_button.h"
 #include "test_input.h"
+#include <algorithm>
 #include <string>
 #include <fstream>
 #include <windows.h>
@@ -15,7 +16,7 @@
 // Config: read ws_url from lixorhost.conf next to the .exe.
 // Format (plain text):
 //   ws_url = wss://lixorhost.datant.ca/overlay
-// Lines starting with '#' are comments. Absent or malformed → localhost default.
+// Lines starting with '#' are comments. Absent or malformed -> localhost default.
 // ---------------------------------------------------------------------------
 static std::string readWsUrlFromConfig() {
     const std::string kDefault = "ws://127.0.0.1:3000/overlay";
@@ -50,6 +51,52 @@ static std::string readWsUrlFromConfig() {
     return kDefault;
 }
 
+// ---------------------------------------------------------------------------
+// Monitor enumeration
+// ---------------------------------------------------------------------------
+
+static BOOL CALLBACK collectMonitor(HMONITOR hMon, HDC, LPRECT, LPARAM lParam) {
+    MONITORINFO mi{};
+    mi.cbSize = sizeof(mi);
+    if (GetMonitorInfoW(hMon, &mi)) {
+        MonitorRects m;
+        m.full    = mi.rcMonitor;
+        m.work    = mi.rcWork;
+        m.primary = (mi.dwFlags & MONITORINFOF_PRIMARY) != 0;
+        reinterpret_cast<std::vector<MonitorRects>*>(lParam)->push_back(m);
+    }
+    return TRUE;
+}
+
+std::vector<MonitorRects> enumerateMonitorsSorted() {
+    std::vector<MonitorRects> monitors;
+    EnumDisplayMonitors(nullptr, nullptr, collectMonitor,
+                        reinterpret_cast<LPARAM>(&monitors));
+
+    // Sort by (left, top) ascending. The Lixor Host server applies the identical
+    // sort to its display list, so index N means the same screen on both sides.
+    std::sort(monitors.begin(), monitors.end(),
+              [](const MonitorRects& a, const MonitorRects& b) {
+                  if (a.full.left != b.full.left) return a.full.left < b.full.left;
+                  return a.full.top < b.full.top;
+              });
+
+    if (monitors.empty()) {
+        // EnumDisplayMonitors should never come back empty, but never hand the
+        // caller an empty list - fall back to the primary screen metrics.
+        MonitorRects m;
+        m.full = RECT{0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)};
+        m.work = m.full;
+        SystemParametersInfoW(SPI_GETWORKAREA, 0, &m.work, 0);
+        m.primary = true;
+        monitors.push_back(m);
+    }
+    return monitors;
+}
+
+/** Pixels above the work-area bottom; keep small so captions sit just above the taskbar. */
+static constexpr int kOverlayBottomPadding = 2;
+
 App& App::instance() {
     static App app;
     return app;
@@ -58,15 +105,17 @@ App& App::instance() {
 bool App::init(HINSTANCE hInstance) {
     hInstance_ = hInstance;
 
-    int screenW = GetSystemMetrics(SM_CXSCREEN);
-    RECT workArea{};
-    SystemParametersInfoW(SPI_GETWORKAREA, 0, &workArea, 0);
-    /** Pixels above work-area bottom; keep small so captions sit just above the taskbar. */
-    static constexpr int kOverlayBottomPadding = 2;
-    int overlayBottomY = workArea.bottom - kOverlayBottomPadding;
+    // Start on the first monitor in (left, top) order; the host pushes the
+    // user's saved "set_display" right after connecting.
+    auto monitors  = enumerateMonitorsSorted();
+    displayIndex_  = 0;
+    const RECT& work = monitors[0].work;
+    int screenX        = work.left;
+    int screenW        = work.right - work.left;
+    int overlayBottomY = work.bottom - kOverlayBottomPadding;
 
     overlayWindow_ = std::make_unique<OverlayWindow>();
-    if (!overlayWindow_->create(hInstance, screenW, overlayBottomY))
+    if (!overlayWindow_->create(hInstance, screenX, screenW, overlayBottomY))
         return false;
 
     renderer_ = std::make_unique<Renderer>();
@@ -82,6 +131,8 @@ bool App::init(HINSTANCE hInstance) {
         AppCallbacks{
             [this](int level) { setFontSizeLevel(level); },
             [this]() { requestRedraw(); },
+            [this](const OverlayColors& c) { setColors(c); },
+            [this](int index) { setDisplayIndex(index); },
         });
 
     wsClient_ = std::make_unique<WsClient>();
@@ -94,7 +145,7 @@ bool App::init(HINSTANCE hInstance) {
     wsClient_->start();
 
     menuButton_ = std::make_unique<MenuButton>();
-    menuButton_->create(hInstance, screenW, overlayBottomY);
+    menuButton_->create(hInstance, screenX, screenW, overlayBottomY);
 
     testInput_ = std::make_unique<TestInput>();
 
@@ -135,5 +186,44 @@ void App::requestRedraw() {
 void App::setFontSizeLevel(int level) {
     if (renderer_)
         renderer_->setFontSizeLevel(level);
+    requestRedraw();
+}
+
+void App::setColors(const OverlayColors& colors) {
+    if (renderer_)
+        renderer_->setColors(colors);
+    requestRedraw();
+}
+
+void App::setDisplayIndex(int index) {
+    displayIndex_ = index < 0 ? 0 : index;
+    applyDisplayPlacement();
+}
+
+void App::handleDisplayChange() {
+    // A monitor was unplugged / resolution changed: re-place on the current
+    // index, which applyDisplayPlacement() clamps back to 0 if it is now gone.
+    applyDisplayPlacement();
+}
+
+void App::applyDisplayPlacement() {
+    auto monitors = enumerateMonitorsSorted();
+    if (displayIndex_ < 0 || displayIndex_ >= static_cast<int>(monitors.size())) {
+        // Selected monitor is gone (or was never there) - fall back to the first one.
+        displayIndex_ = 0;
+    }
+
+    const RECT& work = monitors[displayIndex_].work;
+    int screenX        = work.left;
+    int screenW        = work.right - work.left;
+    int overlayBottomY = work.bottom - kOverlayBottomPadding;
+
+    if (overlayWindow_)
+        overlayWindow_->setMonitorBounds(screenX, screenW, overlayBottomY);
+    if (renderer_ && overlayWindow_)
+        renderer_->resize(overlayWindow_->width(), overlayWindow_->height());
+    if (menuButton_)
+        menuButton_->moveTo(screenX, screenW, overlayBottomY);
+
     requestRedraw();
 }

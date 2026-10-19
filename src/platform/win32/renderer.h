@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "types.h"
+#include "app_callbacks.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -18,6 +19,7 @@ public:
     void render(const std::vector<SubtitleBlock>& blocks);
 
     void setFontSizeLevel(int level);
+    void setColors(const OverlayColors& colors);
 
     int measureHeight(const std::vector<SubtitleBlock>& blocks) const;
 
@@ -34,6 +36,11 @@ private:
     int   fontSizeLevel_ = 5;
     float fontSize_      = 22.0f;
     float labelSize_     = 13.0f;
+
+    /** Host-configurable subtitle colors. Defaults match the original hardcoded
+     *  look (white text on 70%-opaque black) and are kept when no valid "colors"
+     *  message ever arrives. */
+    OverlayColors colors_;
 
     ComPtr<ID2D1Factory>         d2dFactory_;
     ComPtr<IDWriteFactory>       dwFactory_;

@@ -3,12 +3,14 @@
 
 class MenuButton {
 public:
-    bool create(HINSTANCE hInstance, int screenW, int overlayBottomY);
+    bool create(HINSTANCE hInstance, int screenX, int screenW, int overlayBottomY);
     void destroy();
     HWND hwnd() const { return hwnd_; }
 
     void show();
     void hide();
+    /** Follow the caption strip onto another monitor's work area. */
+    void moveTo(int screenX, int screenW, int overlayBottomY);
 
 private:
     static LRESULT CALLBACK wndProc(HWND, UINT, WPARAM, LPARAM);
