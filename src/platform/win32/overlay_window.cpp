@@ -8,7 +8,7 @@
 static constexpr wchar_t kClassName[] = L"LixorOverlayWnd";
 static constexpr int kOverlayHeight = 480;
 
-bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int overlayBottomY) {
+bool OverlayWindow::create(HINSTANCE hInstance, int screenX, int screenW, int overlayBottomY) {
     WNDCLASSEXW wc{};
     wc.cbSize        = sizeof(wc);
     wc.style         = CS_HREDRAW | CS_VREDRAW;
@@ -18,6 +18,7 @@ bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int overlayBottomY)
     wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
     RegisterClassExW(&wc);
 
+    posX_           = screenX;
     width_          = screenW;
     height_         = kOverlayHeight;
     overlayBottomY_ = overlayBottomY;
@@ -27,7 +28,7 @@ bool OverlayWindow::create(HINSTANCE hInstance, int screenW, int overlayBottomY)
         WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
         kClassName, L"Lixor Overlay",
         WS_POPUP,
-        0, posY_, width_, height_,
+        posX_, posY_, width_, height_,
         nullptr, nullptr, hInstance, nullptr);
 
     if (!hwnd_) return false;
@@ -60,7 +61,17 @@ void OverlayWindow::setHeight(int h) {
     height_ = (h > 0 ? h : 0);
     posY_   = overlayBottomY_ - height_;
     if (hwnd_)
-        SetWindowPos(hwnd_, nullptr, 0, posY_, width_, height_,
+        SetWindowPos(hwnd_, nullptr, posX_, posY_, width_, height_,
+                     SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+void OverlayWindow::setMonitorBounds(int screenX, int screenW, int overlayBottomY) {
+    posX_           = screenX;
+    width_          = screenW;
+    overlayBottomY_ = overlayBottomY;
+    posY_           = overlayBottomY_ - height_;
+    if (hwnd_)
+        SetWindowPos(hwnd_, nullptr, posX_, posY_, width_, height_,
                      SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
@@ -101,6 +112,21 @@ LRESULT CALLBACK OverlayWindow::wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
             if (win) win->reassertTopmost();
         }
         return 0;
+    }
+    case WM_DISPLAYCHANGE: {
+        // Monitor plugged/unplugged or resolution changed. Re-enumerate and
+        // re-place; App clamps a now-missing index back to the first monitor.
+        App::instance().handleDisplayChange();
+        return 0;
+    }
+    case WM_SETTINGCHANGE: {
+        // Taskbar moved/resized: the work-area bottom we anchor to has shifted.
+        // Anything else falls through to DefWindowProc untouched.
+        if (wp == SPI_SETWORKAREA) {
+            App::instance().handleDisplayChange();
+            return 0;
+        }
+        break;
     }
     case WM_DESTROY:
         PostQuitMessage(0);

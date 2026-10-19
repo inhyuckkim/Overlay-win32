@@ -73,6 +73,16 @@ void Renderer::setFontSizeLevel(int level) {
     createTextFormats();
 }
 
+void Renderer::setColors(const OverlayColors& colors) {
+    colors_ = colors;
+    // Brushes may not exist yet (device resources are created lazily on first
+    // render); createDeviceResources() picks the new values up in that case.
+    if (textBrush_)
+        textBrush_->SetColor(D2D1::ColorF(colors_.textR, colors_.textG, colors_.textB));
+    if (bgBrush_)
+        bgBrush_->SetColor(D2D1::ColorF(colors_.bgR, colors_.bgG, colors_.bgB, 1.0f));
+}
+
 void Renderer::createDeviceResources() {
     if (rt_) return;
 
@@ -84,8 +94,13 @@ void Renderer::createDeviceResources() {
     d2dFactory_->CreateDCRenderTarget(&props, rt_.GetAddressOf());
     if (!rt_) return;
 
-    rt_->CreateSolidColorBrush(D2D1::ColorF(1.0f, 1.0f, 1.0f), textBrush_.GetAddressOf());
-    rt_->CreateSolidColorBrush(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.70f), bgBrush_.GetAddressOf());
+    rt_->CreateSolidColorBrush(
+        D2D1::ColorF(colors_.textR, colors_.textG, colors_.textB), textBrush_.GetAddressOf());
+    // Opaque brush color: render() carries the whole background alpha through
+    // SetOpacity(blockOpacity * colors_.bgOpacity), so bgOpacity stays linear
+    // (0 = no background at all, 1 = fully opaque).
+    rt_->CreateSolidColorBrush(
+        D2D1::ColorF(colors_.bgR, colors_.bgG, colors_.bgB, 1.0f), bgBrush_.GetAddressOf());
     rt_->CreateSolidColorBrush(D2D1::ColorF(0.7f, 0.7f, 0.7f), labelBrush_.GetAddressOf());
 }
 
@@ -213,7 +228,7 @@ void Renderer::render(const std::vector<SubtitleBlock>& blocks) {
 
             float opacity = b.opacity;
 
-            bgBrush_->SetOpacity(opacity * 0.70f);
+            bgBrush_->SetOpacity(opacity * colors_.bgOpacity);
             D2D1_ROUNDED_RECT rrect = D2D1::RoundedRect(
                 D2D1::RectF(blockX, curY, blockX + blockW, curY + blockH),
                 kCornerRadius, kCornerRadius);
